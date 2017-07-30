@@ -49,7 +49,7 @@ public class IRI {
     public static void main(final String[] args) throws IOException {
         configuration = new Configuration();
         validateParams(configuration, args);
-        log.info("Welcome to {} {}", configuration.booling(DefaultConfSettings.TESTNET) ? TESTNET_NAME : MAINNET_NAME, VERSION);
+        log.info("Welcome to {} {} - S.E.E.", configuration.booling(DefaultConfSettings.TESTNET) ? TESTNET_NAME : MAINNET_NAME, VERSION);
         iota = new Iota(configuration);
         ixi = new IXI(iota);
         api = new API(iota, ixi);
@@ -83,8 +83,8 @@ public class IRI {
         }
 
         try {
-            iota.init();
             api.init();
+            iota.init();
             ixi.init(configuration.string(Configuration.DefaultConfSettings.IXI_DIR));
         } catch (final Exception e) {
             log.error("Exception during IOTA node initialisation: ", e);
