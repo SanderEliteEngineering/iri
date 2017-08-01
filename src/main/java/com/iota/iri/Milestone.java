@@ -134,6 +134,10 @@ public class Milestone {
                                 + previousSolidSubtangleLatestMilestoneIndex + " to #"
                                 + latestSolidSubtangleMilestoneIndex);
                     }
+                    else
+                    {
+                    	 log.info("Latest SOLID SUBTANGLE milestone has NOT changed! #" + latestSolidSubtangleMilestoneIndex);
+                    }
 
                     Thread.sleep(Math.max(1, RESCAN_INTERVAL - (System.currentTimeMillis() - scanTime)));
 
