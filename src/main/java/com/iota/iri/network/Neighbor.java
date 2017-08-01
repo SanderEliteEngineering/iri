@@ -14,6 +14,7 @@ public abstract class Neighbor {
     private long numberOfInvalidTransactions;
     private long randomTransactionRequests;
     private long numberOfSentTransactions;
+    private long lastTransactionTime = 0;
 
     private boolean flagged = false;
     public boolean isFlagged() {
@@ -68,6 +69,7 @@ public abstract class Neighbor {
     
     void incAllTransactions() {
     	numberOfAllTransactions++;
+    	lastTransactionTime = System.currentTimeMillis();
     }
     
     void incNewTransactions() {
@@ -104,6 +106,10 @@ public abstract class Neighbor {
 	
 	public long getNumberOfSentTransactions() {
 	    return numberOfSentTransactions;
+	}
+	
+	public long getMillisecondsSinceLastTransaction() {
+	    return System.currentTimeMillis() - lastTransactionTime;
 	}
     
 }
