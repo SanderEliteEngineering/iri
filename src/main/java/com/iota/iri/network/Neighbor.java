@@ -74,7 +74,7 @@ public abstract class Neighbor {
     	long tt = System.currentTimeMillis();
     	msSinceLastTransaction = tt - lastTransactionTime;
     	lastTransactionTime = tt; 
-    	msAverageTransactionDeltaTime = ((msAverageTransactionDeltaTime *  numberOfAllTransactions - 1) / numberOfAllTransactions);
+    	msAverageTransactionDeltaTime = (((msAverageTransactionDeltaTime *  numberOfAllTransactions - 1) + msSinceLastTransaction ) / numberOfAllTransactions);
     }
     
     void incAllTransactions() {
