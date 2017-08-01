@@ -15,6 +15,8 @@ public abstract class Neighbor {
     private long randomTransactionRequests;
     private long numberOfSentTransactions;
     private long lastTransactionTime = 0;
+    private long msAverageTransactionDeltaTime = 0;
+    private long msSinceLastTransaction = 0;
 
     private boolean flagged = false;
     public boolean isFlagged() {
@@ -67,9 +69,17 @@ public abstract class Neighbor {
 		return address;
 	}
     
+    void calcTransactionTimes()
+    {
+    	long tt = System.currentTimeMillis();
+    	msSinceLastTransaction = tt - lastTransactionTime;
+    	lastTransactionTime = tt; 
+    	msAverageTransactionDeltaTime = ((msAverageTransactionDeltaTime *  numberOfAllTransactions - 1) / numberOfAllTransactions);
+    }
+    
     void incAllTransactions() {
     	numberOfAllTransactions++;
-    	lastTransactionTime = System.currentTimeMillis();
+    	calcTransactionTimes();
     }
     
     void incNewTransactions() {
@@ -109,7 +119,11 @@ public abstract class Neighbor {
 	}
 	
 	public long getMillisecondsSinceLastTransaction() {
-	    return System.currentTimeMillis() - lastTransactionTime;
+	    return msSinceLastTransaction;
+	}
+	
+	public long getAverageTransactionTimeDeltaMilliseconds() {
+	    return msAverageTransactionDeltaTime;
 	}
     
 }
