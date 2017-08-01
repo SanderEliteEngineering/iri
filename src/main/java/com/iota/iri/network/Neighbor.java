@@ -48,6 +48,7 @@ public abstract class Neighbor {
         this.address = address;
         this.hostAddress = address.getAddress().getHostAddress();
         this.flagged = isConfigured;
+        this.lastTransactionTime = System.currentTimeMillis();
     }
 
     public abstract void send(final DatagramPacket packet);
@@ -71,10 +72,10 @@ public abstract class Neighbor {
     
     void calcTransactionTimes()
     {
-    	long tt = System.currentTimeMillis();
+    	long tt = System.currentTimeMillis();	
     	msSinceLastTransaction = tt - lastTransactionTime;
     	lastTransactionTime = tt; 
-    	msAverageTransactionDeltaTime = (((msAverageTransactionDeltaTime *  numberOfAllTransactions - 1) + msSinceLastTransaction ) / numberOfAllTransactions);
+    	msAverageTransactionDeltaTime = (((msAverageTransactionDeltaTime * (numberOfAllTransactions - 1)) + msSinceLastTransaction ) / numberOfAllTransactions);
     }
     
     void incAllTransactions() {
