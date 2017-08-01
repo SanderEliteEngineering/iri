@@ -60,6 +60,7 @@ public class Milestone {
 
     private boolean shuttingDown;
     private static int RESCAN_INTERVAL = 5000;
+    private long lastSolidMilestoneLog = 0;
 
     public void init(final SpongeFactory.Mode mode, final LedgerValidator ledgerValidator, final boolean revalidate) {
         this.ledgerValidator = ledgerValidator;
@@ -133,10 +134,15 @@ public class Milestone {
                         log.info("Latest SOLID SUBTANGLE milestone has changed from #"
                                 + previousSolidSubtangleLatestMilestoneIndex + " to #"
                                 + latestSolidSubtangleMilestoneIndex);
+                        lastSolidMilestoneLog = System.currentTimeMillis();
                     }
                     else
                     {
-                    	 log.info("Latest SOLID SUBTANGLE milestone has NOT changed! #" + latestSolidSubtangleMilestoneIndex);
+                    	if(System.currentTimeMillis() - lastSolidMilestoneLog >= 60000)
+                    	{
+                    	   log.info("Latest SOLID SUBTANGLE milestone has NOT changed! #" + latestSolidSubtangleMilestoneIndex);
+                    	   lastSolidMilestoneLog = System.currentTimeMillis();
+                    	}
                     }
 
                     Thread.sleep(Math.max(1, RESCAN_INTERVAL - (System.currentTimeMillis() - scanTime)));
