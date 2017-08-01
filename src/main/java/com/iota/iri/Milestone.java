@@ -138,7 +138,7 @@ public class Milestone {
                     }
                     else
                     {
-                    	if(System.currentTimeMillis() - lastSolidMilestoneLog >= 60000)
+                    	if(System.currentTimeMillis() - lastSolidMilestoneLog >= 300000)
                     	{
                     	   log.info("Latest SOLID SUBTANGLE milestone has NOT changed! #" + latestSolidSubtangleMilestoneIndex);
                     	   lastSolidMilestoneLog = System.currentTimeMillis();
