@@ -228,12 +228,16 @@ public class LedgerValidator {
      * @throws Exception
      */
     private long buildSnapshotStartTime;
-    private long lastSnapshotLogTime;
     private int snapshotIterations;
+    private int snapshotDeleteIterations;
+    private int snapshotUpdateIterations;
+    private int snapshotMergeIterations;
+    
     private MilestoneViewModel buildSnapshot(boolean revalidate) throws Exception {
         MilestoneViewModel consistentMilestone = null;
         synchronized (latestSnapshotSyncObject) {        	
-        	buildSnapshotStartTime = lastSnapshotLogTime = System.currentTimeMillis();     
+        	log.info("BuildSnapshot Starting!!!");
+        	buildSnapshotStartTime = System.currentTimeMillis();     
         	snapshotIterations = 0;
             Snapshot updatedSnapshot = latestSnapshot.patch(new HashMap<>(), 0);
             StateDiffViewModel stateDiffViewModel;
@@ -245,10 +249,14 @@ public class LedgerValidator {
                     consistentMilestone = snapshotMilestone;
                     latestSnapshot.merge(updatedSnapshot);
                     snapshotMilestone = snapshotMilestone.nextWithSnapshot(tangle);
+                    snapshotMergeIterations++;
+                    controlledLog("BuildSnapshot [merge] still running! Elapsed time: " + Long.toString(System.currentTimeMillis() - buildSnapshotStartTime)  + "ms Iteration: " + snapshotMergeIterations, 30000);
                 } else {
                     snapshotMilestone = MilestoneViewModel.first(tangle);
                     do {
                         StateDiffViewModel.load(tangle, snapshotMilestone.getHash()).delete(tangle);
+                        snapshotDeleteIterations++;
+                        controlledLog("BuildSnapshot [delete] still running! Elapsed time: " + Long.toString(System.currentTimeMillis() - buildSnapshotStartTime)  + "ms Iteration: " + snapshotDeleteIterations, 30000);
                     } while ((snapshotMilestone = snapshotMilestone.nextWithSnapshot(tangle)) != null);
                     TransactionViewModel transactionViewModel = TransactionViewModel.first(tangle);
                     transactionViewModel.updateSolid(false);
@@ -256,25 +264,32 @@ public class LedgerValidator {
                     while((transactionViewModel = transactionViewModel.next(tangle)) != null) {
                         transactionViewModel.updateSolid(false);
                         transactionViewModel.setSnapshot(tangle, 0);
+                        snapshotUpdateIterations++;
+                        controlledLog("BuildSnapshot [update] still running! Elapsed time: " + Long.toString(System.currentTimeMillis() - buildSnapshotStartTime)  + "ms Iteration: " + snapshotUpdateIterations, 30000);
                     }
                 }
-                
                 snapshotIterations++;
-                long st = System.currentTimeMillis();
-                long dt = st - lastSnapshotLogTime;
-                if(dt >= 120000)
-                {
-                	log.info("BuildSnapshot still running! Elapsed time: " + dt + "ms Iterations: " + snapshotIterations);
-                	lastSnapshotLogTime = st;
-                }
-                
+                controlledLog("BuildSnapshot [main] still running! Elapsed time: " + Long.toString(System.currentTimeMillis() - buildSnapshotStartTime)  + "ms Iteration: " + snapshotIterations, 30000);
+    
             }
         }
         
-        log.info("BuildSnapshot completed! Elapsed time = " + Long.toString(System.currentTimeMillis() - buildSnapshotStartTime) + "ms");
+        log.info("BuildSnapshot Completed! Elapsed time = " + Long.toString(System.currentTimeMillis() - buildSnapshotStartTime) + "ms");
         return consistentMilestone;
     }
-
+    
+    private long lastLogTime;
+    private void controlledLog(String msg, int interval)
+    {
+        long st = System.currentTimeMillis();
+        long dt = st - lastLogTime;
+        if(dt >= interval)
+        {
+        	log.info(msg);
+        	lastLogTime = st;
+        }
+    }
+    
     public boolean updateSnapshot(MilestoneViewModel milestone) throws Exception {
         TransactionViewModel transactionViewModel = TransactionViewModel.fromHash(tangle, milestone.getHash());
         synchronized (latestSnapshotSyncObject) {
