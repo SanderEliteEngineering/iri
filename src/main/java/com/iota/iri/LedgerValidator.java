@@ -36,6 +36,7 @@ public class LedgerValidator {
         stateSinceMilestone = new Snapshot(latestSnapshot);
         this.latestSnapshot = latestSnapshot;
         this.messageQ = messageQ;
+        startLogger();
     }
 
     /**
@@ -228,17 +229,22 @@ public class LedgerValidator {
      * @throws Exception
      */
     private long buildSnapshotStartTime;
-    private int snapshotIterations;
     private int snapshotDeleteIterations;
     private int snapshotUpdateIterations;
     private int snapshotMergeIterations;
+    private boolean buildSnapshotRunning;
+    private boolean snapshotRevalidate;    
     
     private MilestoneViewModel buildSnapshot(boolean revalidate) throws Exception {
         MilestoneViewModel consistentMilestone = null;
-        synchronized (latestSnapshotSyncObject) {        	
-        	log.info("BuildSnapshot Starting!!!");
-        	buildSnapshotStartTime = System.currentTimeMillis();     
-        	snapshotIterations = 0;
+        synchronized (latestSnapshotSyncObject) {   
+        	
+        	log.info("BuildSnapshot Started!" + (revalidate ? " --revalidate" : ""));
+        	buildSnapshotRunning = true;      	
+        	buildSnapshotStartTime = System.currentTimeMillis();    
+        	snapshotRevalidate = revalidate;
+        	snapshotDeleteIterations = snapshotUpdateIterations = snapshotMergeIterations = 0;
+        	
             Snapshot updatedSnapshot = latestSnapshot.patch(new HashMap<>(), 0);
             StateDiffViewModel stateDiffViewModel;
             MilestoneViewModel snapshotMilestone = MilestoneViewModel.firstWithSnapshot(tangle);
@@ -249,14 +255,12 @@ public class LedgerValidator {
                     consistentMilestone = snapshotMilestone;
                     latestSnapshot.merge(updatedSnapshot);
                     snapshotMilestone = snapshotMilestone.nextWithSnapshot(tangle);
-                    snapshotMergeIterations++;
-                    controlledLog("BuildSnapshot [merge] still running! Elapsed time: " + Long.toString(System.currentTimeMillis() - buildSnapshotStartTime)  + "ms Iteration: " + snapshotMergeIterations, 30000);
+                    snapshotMergeIterations++;    
                 } else {
                     snapshotMilestone = MilestoneViewModel.first(tangle);
                     do {
                         StateDiffViewModel.load(tangle, snapshotMilestone.getHash()).delete(tangle);
-                        snapshotDeleteIterations++;
-                        controlledLog("BuildSnapshot [delete] still running! Elapsed time: " + Long.toString(System.currentTimeMillis() - buildSnapshotStartTime)  + "ms Iteration: " + snapshotDeleteIterations, 30000);
+                        snapshotDeleteIterations++;                       
                     } while ((snapshotMilestone = snapshotMilestone.nextWithSnapshot(tangle)) != null);
                     TransactionViewModel transactionViewModel = TransactionViewModel.first(tangle);
                     transactionViewModel.updateSolid(false);
@@ -265,30 +269,52 @@ public class LedgerValidator {
                         transactionViewModel.updateSolid(false);
                         transactionViewModel.setSnapshot(tangle, 0);
                         snapshotUpdateIterations++;
-                        controlledLog("BuildSnapshot [update] still running! Elapsed time: " + Long.toString(System.currentTimeMillis() - buildSnapshotStartTime)  + "ms Iteration: " + snapshotUpdateIterations, 30000);
                     }
                 }
-                snapshotIterations++;
-                controlledLog("BuildSnapshot [main] still running! Elapsed time: " + Long.toString(System.currentTimeMillis() - buildSnapshotStartTime)  + "ms Iteration: " + snapshotIterations, 30000);
-    
             }
         }
         
-        log.info("BuildSnapshot Completed! Elapsed time = " + Long.toString(System.currentTimeMillis() - buildSnapshotStartTime) + "ms");
+        log.info("BuildSnapshot Completed! Elapsed time: " + Long.toString(System.currentTimeMillis() - buildSnapshotStartTime) + "ms");
+        buildSnapshotRunning = false;
         return consistentMilestone;
     }
     
-    private long lastLogTime;
-    private void controlledLog(String msg, int interval)
-    {
-        long st = System.currentTimeMillis();
-        long dt = st - lastLogTime;
-        if(dt >= interval)
-        {
-        	log.info(msg);
-        	lastLogTime = st;
-        }
+
+    private boolean shuttingDown = false;
+    void shutDown() {
+        shuttingDown = true;
     }
+    
+    private void startLogger()
+    {
+	    (new Thread(() -> {
+	        while (!shuttingDown) {
+	          	
+	            try {
+	            
+	            	if(buildSnapshotRunning)
+	            	{
+	            		log.info("BuildSnapshot still running! Elapsed time: " + Long.toString(System.currentTimeMillis() - buildSnapshotStartTime)  + "ms");
+	            		if(snapshotRevalidate)
+	            		{
+		            		log.info("BuildSnapshot Update Iterations: " + snapshotUpdateIterations);
+		            		log.info("BuildSnapshot Delete Iterations: " + snapshotDeleteIterations);
+	            		}
+	            		else
+	            		{
+	            			log.info("BuildSnapshot Merge Iterations: " + snapshotMergeIterations);
+	            		}
+	            	}
+	            	
+	                Thread.sleep(30000);
+	
+	            } catch (final Exception e) {
+	                log.error("Error during LedgerValidation logging!", e);
+	            }
+	        }
+	    }, "Ledger Validator")).start();
+    }
+
     
     public boolean updateSnapshot(MilestoneViewModel milestone) throws Exception {
         TransactionViewModel transactionViewModel = TransactionViewModel.fromHash(tangle, milestone.getHash());

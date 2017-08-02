@@ -170,6 +170,7 @@ public class Iota {
         replicator.shutdown();
         transactionValidator.shutdown();
         tangle.shutdown();
+        ledgerValidator.shutDown();
     }
 
     private void initializeTangle() {
