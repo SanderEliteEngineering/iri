@@ -227,9 +227,14 @@ public class LedgerValidator {
      * @return              the most recent consistent milestone with a confirmed.
      * @throws Exception
      */
+    private long buildSnapshotStartTime;
+    private long lastSnapshotLogTime;
+    private int snapshotIterations;
     private MilestoneViewModel buildSnapshot(boolean revalidate) throws Exception {
         MilestoneViewModel consistentMilestone = null;
-        synchronized (latestSnapshotSyncObject) {
+        synchronized (latestSnapshotSyncObject) {        	
+        	buildSnapshotStartTime = lastSnapshotLogTime = System.currentTimeMillis();     
+        	snapshotIterations = 0;
             Snapshot updatedSnapshot = latestSnapshot.patch(new HashMap<>(), 0);
             StateDiffViewModel stateDiffViewModel;
             MilestoneViewModel snapshotMilestone = MilestoneViewModel.firstWithSnapshot(tangle);
@@ -253,8 +258,20 @@ public class LedgerValidator {
                         transactionViewModel.setSnapshot(tangle, 0);
                     }
                 }
+                
+                snapshotIterations++;
+                long st = System.currentTimeMillis();
+                long dt = st - lastSnapshotLogTime;
+                if(dt >= 120000)
+                {
+                	log.info("BuildSnapshot still running! Elapsed time: " + dt + "ms Iterations: " + snapshotIterations);
+                	lastSnapshotLogTime = st;
+                }
+                
             }
         }
+        
+        log.info("BuildSnapshot completed! Elapsed time = " + Long.toString(System.currentTimeMillis() - buildSnapshotStartTime) + "ms");
         return consistentMilestone;
     }
 
