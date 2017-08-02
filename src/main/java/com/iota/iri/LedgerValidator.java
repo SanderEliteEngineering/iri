@@ -275,6 +275,15 @@ public class LedgerValidator {
         }
         
         log.info("BuildSnapshot Completed! Elapsed time: " + Long.toString(System.currentTimeMillis() - buildSnapshotStartTime) + "ms");
+        if(snapshotRevalidate)
+		{
+    		log.info("BuildSnapshot Update Iterations: " + snapshotUpdateIterations);
+    		log.info("BuildSnapshot Delete Iterations: " + snapshotDeleteIterations);
+		}
+		else
+		{
+			log.info("BuildSnapshot Merge Iterations: " + snapshotMergeIterations);
+		}
         buildSnapshotRunning = false;
         return consistentMilestone;
     }
