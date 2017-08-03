@@ -59,7 +59,7 @@ public class Milestone {
     }
 
     private boolean shuttingDown;
-    private static int RESCAN_INTERVAL = 5000;
+    public static int RESCAN_INTERVAL = 5000;
     private long lastMilestoneLog = 0;
     private long lastSolidMilestoneLog = 0;
 
