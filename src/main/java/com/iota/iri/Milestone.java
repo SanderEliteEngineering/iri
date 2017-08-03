@@ -221,7 +221,7 @@ public class Milestone {
                     latestSolidSubtangleMilestoneIndex = milestoneViewModel.index();
                 } else {
                     lookAhead++;
-                    if (lookAhead>=10) {
+                    if (lookAhead>=50) {
                         break;
                     }
                 }
