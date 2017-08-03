@@ -23,6 +23,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.lang.Number;
 
 import com.iota.iri.*;
 import com.iota.iri.controllers.*;
@@ -180,6 +181,14 @@ public class API {
 
             switch (command) {
 
+	            case "setRescanInterval": {
+	            	
+	            	final int i = Integer.valueOf((String)request.get("int"));	                  
+	            	Milestone.RESCAN_INTERVAL = i;
+	            	log.info("RESCAN_INTERVAL set to " + i);
+	            	return AbstractResponse.createEmptyResponse();
+	            }
+	            
                 case "addNeighbors": {
                     if (!request.containsKey("uris")) {
                         return ErrorResponse.create("Invalid params");
