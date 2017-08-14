@@ -2,7 +2,6 @@ package com.iota.iri;
 
 import com.iota.iri.conf.Configuration;
 import com.iota.iri.controllers.*;
-import com.iota.iri.hash.SpongeFactory;
 import com.iota.iri.network.TransactionRequester;
 import com.iota.iri.model.Hash;
 import com.iota.iri.network.Node;
@@ -14,7 +13,6 @@ import com.iota.iri.storage.FileExportProvider;
 import com.iota.iri.storage.Indexable;
 import com.iota.iri.storage.Persistable;
 import com.iota.iri.storage.Tangle;
-import com.iota.iri.storage.ZmqPublishProvider;
 import com.iota.iri.storage.rocksDB.RocksDBPersistenceProvider;
 import com.iota.iri.utils.Pair;
 import org.apache.commons.lang3.NotImplementedException;
@@ -96,7 +94,7 @@ public class Iota {
             rescan_db();
         }
 
-        milestone.init(SpongeFactory.Mode.CURL, ledgerValidator, configuration.booling(Configuration.DefaultConfSettings.REVALIDATE));
+        milestone.init(ledgerValidator, configuration.booling(Configuration.DefaultConfSettings.REVALIDATE));
         transactionValidator.init(testnet, configuration.integer(Configuration.DefaultConfSettings.MAINNET_MWM), configuration.integer(Configuration.DefaultConfSettings.TESTNET_MWM));
         tipsManager.init();
         transactionRequester.init(configuration.doubling(Configuration.DefaultConfSettings.P_REMOVE_REQUEST.name()));
@@ -192,8 +190,7 @@ public class Iota {
             case "rocksdb": {
                 tangle.addPersistenceProvider(new RocksDBPersistenceProvider(
                         configuration.string(Configuration.DefaultConfSettings.DB_PATH),
-                        configuration.string(Configuration.DefaultConfSettings.DB_LOG_PATH),
-                        configuration.integer(Configuration.DefaultConfSettings.DB_CACHE_SIZE)));
+                        configuration.string(Configuration.DefaultConfSettings.DB_LOG_PATH) ));
                 break;
             }
             default: {
@@ -202,9 +199,6 @@ public class Iota {
         }
         if (configuration.booling(Configuration.DefaultConfSettings.EXPORT)) {
             tangle.addPersistenceProvider(new FileExportProvider());
-        }
-        if (configuration.booling(Configuration.DefaultConfSettings.ZMQ_ENABLED)) {
-            tangle.addPersistenceProvider(new ZmqPublishProvider(messageQ));
         }
     }
 }

@@ -26,7 +26,7 @@ public class MilestoneViewModelTest {
         logFolder.create();
         RocksDBPersistenceProvider rocksDBPersistenceProvider;
         rocksDBPersistenceProvider = new RocksDBPersistenceProvider(dbFolder.getRoot().getAbsolutePath(),
-                logFolder.getRoot().getAbsolutePath(),1000);
+                logFolder.getRoot().getAbsolutePath());
         tangle.addPersistenceProvider(rocksDBPersistenceProvider);
         tangle.init();
     }

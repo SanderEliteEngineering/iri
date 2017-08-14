@@ -2,7 +2,6 @@ package com.iota.iri.storage;
 
 import com.iota.iri.conf.Configuration;
 import com.iota.iri.hash.Curl;
-import com.iota.iri.hash.SpongeFactory;
 import com.iota.iri.model.Hash;
 import com.iota.iri.model.Transaction;
 import com.iota.iri.storage.rocksDB.RocksDBPersistenceProvider;
@@ -35,7 +34,7 @@ public class TangleTest {
         logFolder.create();
         RocksDBPersistenceProvider rocksDBPersistenceProvider;
         rocksDBPersistenceProvider = new RocksDBPersistenceProvider(dbFolder.getRoot().getAbsolutePath(),
-                logFolder.getRoot().getAbsolutePath(),1000);
+                logFolder.getRoot().getAbsolutePath());
         tangle.addPersistenceProvider(rocksDBPersistenceProvider);
         tangle.init();
     }
@@ -52,7 +51,7 @@ public class TangleTest {
         int[] hash = new int[Curl.HASH_LENGTH],
                 trits = Arrays.stream(new int[TransactionViewModel.TRINARY_SIZE])
                         .map(i -> r.nextInt(3)-1).toArray();
-        Curl curl = SpongeFactory.create(SpongeFactory.Mode.CURL);
+        Curl curl = new Curl();
         curl.absorb(trits, 0, trits.length);
         curl.squeeze(hash, 0, Curl.HASH_LENGTH);
         transaction.bytes = Converter.bytes(trits);
@@ -63,7 +62,7 @@ public class TangleTest {
     @Test
     public void getKeysStartingWithValue() throws Exception {
         int[] trits = getRandomTransactionTrits();
-        TransactionViewModel transactionViewModel = new TransactionViewModel(trits, Hash.calculate(SpongeFactory.Mode.CURL, trits));
+        TransactionViewModel transactionViewModel = new TransactionViewModel(trits, Hash.calculate(trits));
         transactionViewModel.store(tangle);
         Set<Indexable> tag = tangle.keysStartingWith(Transaction.class, Arrays.copyOf(transactionViewModel.getTagValue().bytes(), 15));
         //Assert.assertNotEquals(tag.length, 0);

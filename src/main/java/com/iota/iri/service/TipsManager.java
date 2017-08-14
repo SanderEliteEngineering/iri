@@ -95,7 +95,7 @@ public class TipsManager {
         catch (Exception e) {
             log.error("Error in shutdown",e);
         }
-
+            
     }
 
     Hash transactionToApprove(final Hash reference, final Hash extraTip, final int depth, final int iterations, Random seed) {
@@ -178,77 +178,60 @@ public class TipsManager {
         TransactionViewModel transactionViewModel;
         int approverIndex;
         double ratingWeight;
-        double[] walkRatings;
         while (tip != null) {
-            transactionViewModel = TransactionViewModel.fromHash(tangle, tip);
-            tipSet = transactionViewModel.getApprovers(tangle).getHashes();
-            if(transactionViewModel.getCurrentIndex() == 0) {
-                if (transactionViewModel.getType() == TransactionViewModel.PREFILLED_SLOT) {
-                    log.info("Reason to stop: transactionViewModel == null");
-                    messageQ.publish("rtsn %s", transactionViewModel.getHash());
-                    break;
-                } else if (!transactionValidator.checkSolidity(transactionViewModel.getHash(), false)) {
-                    //} else if (!transactionViewModel.isSolid()) {
-                    log.info("Reason to stop: !checkSolidity");
-                    messageQ.publish("rtss %s", transactionViewModel.getHash());
-                    break;
-
-                } else if (belowMaxDepth(transactionViewModel.getHash(), maxDepth, maxDepthOk)) {
-                    log.info("Reason to stop: belowMaxDepth");
-                    break;
-
-                } else if (!ledgerValidator.updateFromSnapshot(transactionViewModel.getHash())) {
-                    log.info("Reason to stop: !LedgerValidator");
-                    messageQ.publish("rtsv %s", transactionViewModel.getHash());
-                    break;
-                } else if (transactionViewModel.getHash().equals(extraTip)) {
-                    log.info("Reason to stop: transactionViewModel==extraTip");
-                    messageQ.publish("rtsd %s", transactionViewModel.getHash());
-                    break;
-                }
-                // set the tail here!
-                tail = tip;
-                traversedTails++;
-            }
-            if(tipSet.size() == 0) {
+            tipSet = TransactionViewModel.fromHash(tangle, tip).getApprovers(tangle).getHashes();
+            tips = tipSet.toArray(new Hash[tipSet.size()]);
+            if (tips.length == 0) {
                 log.info("Reason to stop: TransactionViewModel is a tip");
                 messageQ.publish("rtst %s", tip);
                 break;
-            } else if (tipSet.size() == 1) {
-                Iterator<Hash> hashIterator = tipSet.iterator();
-                if(hashIterator.hasNext()) {
-                    tip = hashIterator.next();
-                } else {
-                    tip = null;
-                }
-            } else {
-                // walk to the next approver
-                tips = tipSet.toArray(new Hash[tipSet.size()]);
-                if (!ratings.containsKey(tip)) {
-                    serialUpdateRatings(tip, ratings, analyzedTips, extraTip);
-                    analyzedTips.clear();
-                }
+            }
+            if (!ratings.containsKey(tip)) {
+                serialUpdateRatings(tip, ratings, analyzedTips, extraTip);
+                analyzedTips.clear();
+            }
 
-                walkRatings = new double[tips.length];
-                double maxRating = 0;
-                for (int i = 0; i < tips.length; i++) {
-                    if (ratings.containsKey(tips[i])) {
-                        walkRatings[i] = Math.sqrt(ratings.get(tips[i]));
-                        maxRating += walkRatings[i];
-                    }
+            ratingWeight = rnd.nextDouble() * Math.sqrt(ratings.get(tip));
+            for (approverIndex = tips.length; approverIndex-- > 1; ) {
+                if (ratings.containsKey(tips[approverIndex])) {
+                    ratingWeight -= Math.sqrt(ratings.get(tips[approverIndex]));
                 }
-                ratingWeight = rnd.nextDouble() * maxRating;
-                for (approverIndex = tips.length; approverIndex-- > 1; ) {
-                    ratingWeight -= walkRatings[approverIndex];
-                    if (ratingWeight <= 0) {
-                        break;
-                    }
-                }
-                tip = tips[approverIndex];
-                if (transactionViewModel.getHash().equals(tip)) {
-                    log.info("Reason to stop: transactionViewModel==itself");
-                    messageQ.publish("rtsl %s", transactionViewModel.getHash());
+                if (ratingWeight <= 0) {
                     break;
+                }
+            }
+            transactionViewModel = TransactionViewModel.fromHash(tangle, tips[approverIndex]);
+            if (transactionViewModel.getType() == TransactionViewModel.PREFILLED_SLOT) {
+                log.info("Reason to stop: transactionViewModel == null");
+                messageQ.publish("rtsn %s", tips[approverIndex]);
+                break;
+            } else if (!transactionValidator.checkSolidity(transactionViewModel.getHash(), false)) {
+                //} else if (!transactionViewModel.isSolid()) {
+                log.info("Reason to stop: !checkSolidity");
+                messageQ.publish("rtss %s", tips[approverIndex]);
+                break;
+
+            } else if (belowMaxDepth(transactionViewModel.getHash(), maxDepth, maxDepthOk)) {
+                log.info("Reason to stop: belowMaxDepth");
+                break;
+
+            } else if (!ledgerValidator.updateFromSnapshot(transactionViewModel.getHash())) {
+                log.info("Reason to stop: !LedgerValidator");
+                messageQ.publish("rtsv %s", tips[approverIndex]);
+                break;
+            } else if (transactionViewModel.getHash().equals(extraTip)) {
+                log.info("Reason to stop: transactionViewModel==extraTip");
+                messageQ.publish("rtsd %s", tips[approverIndex]);
+                break;
+            } else if (transactionViewModel.getHash().equals(tip)) {
+                log.info("Reason to stop: transactionViewModel==itself");
+                messageQ.publish("rtsl %s", tips[approverIndex]);
+                break;
+            } else {
+                traversedTails++;
+                tip = transactionViewModel.getHash();
+                if(transactionViewModel.getCurrentIndex() == 0) {
+                    tail = tip;
                 }
             }
         }
@@ -308,7 +291,7 @@ public class TipsManager {
                 rating = new HashSet<>();
             }
         }
-        return rating;
+        return rating;       
     }
 
     long recursiveUpdateRatings(Hash txHash, Map<Hash, Long> ratings, Set<Hash> analyzedTips) throws Exception {
